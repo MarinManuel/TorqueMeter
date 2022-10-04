@@ -1,5 +1,6 @@
 # Torque Meter
 A low-cost, Open-Source device to evaluate hypertonia in a rabbit model of cerebral palsy
+![A 3D model of the finished device](https://github.com/MarinManuel/TorqueMeter/blob/7ad48c22c7a120d471c87918b3fdc1228bf73fee/Assets/Figure%201.png)
 
 ## Files
  - Schematics.fzz - Schematics of the electronics, Fritzing format
