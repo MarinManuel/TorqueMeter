@@ -1,0 +1,9 @@
+name: torque
+channels:
+  - defaults
+dependencies:
+  - pyqt=5
+  - pyqtgraph
+  - pyserial
+  - python=3.9
+  - numpy~=1.23
