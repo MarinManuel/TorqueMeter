@@ -1,11 +1,15 @@
 # TorquePlotter.py
 # Quick and dirty GUI for reading incoming serial port data from the Torque Meter
 # plotting the data and saving it as csv file
-import datetime
-import io
+import argparse
 import logging
 import typing
+from io import StringIO
+from pathlib import Path
+
 import numpy as np
+import pyqtgraph as pg
+import pyqtgraph.exporters
 import serial
 from PyQt5 import uic
 from PyQt5.QtCore import QTimer
@@ -20,40 +24,20 @@ from PyQt5.QtWidgets import (
     QGroupBox,
     QMessageBox,
     QMainWindow,
-    QApplication, QAction,
+    QApplication, QAction, QSpinBox, QButtonGroup, QDoubleSpinBox, QRadioButton,
 )
-import pyqtgraph as pg
-import pyqtgraph.exporters
-from pathlib import Path
 from serial.tools import list_ports
-import argparse
 
 UPDATE_PERIOD = 100  # in ms
-DATE_FORMAT = "%Y%m%d"  # format of the date added to the filename
+FILE_NAME_TEMPLATE = '{ID}_P{Age:d}_{Limb}_{Speed}s{Comments}'
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--log-level",
-    help="level of information to log. "
-    "Can be one of [DEBUG,INFO,WARNING,ERROR,CRITICAL]. "
-    "Default is WARNING",
-    default="WARNING",
-)
-parser.add_argument(
-    "--log-file",
-    help="file in which the log is written. "
-    "If absent or None, log is directed to stdout",
-    default=None,
-)
-args = parser.parse_args()
-
-# see https://docs.python.org/3/howto/logging.html#logging-to-a-file
-numeric_level = getattr(logging, args.log_level.upper(), None)
-if not isinstance(numeric_level, int):
-    raise ValueError(f"Invalid log level: {args.log_level}")
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=numeric_level, filename=args.log_file, filemode="w")
-script_root = Path(__file__).resolve().parent
+logger = logging.getLogger("TorquePlotter")
+handler = logging.StreamHandler()
+# noinspection SpellCheckingInspection
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+LOGGING_LEVELS = [logging.NOTSET, logging.WARNING, logging.INFO, logging.DEBUG]
 
 
 class MainWindow(QMainWindow):
@@ -67,6 +51,14 @@ class MainWindow(QMainWindow):
     browseButton: QPushButton
     baudRateComboBox: QComboBox
     subjectIDEdit: QLineEdit
+    subjectAgeSpinBox: QSpinBox
+    limbButtonGroup: QButtonGroup
+    subjectLimbFLRadioButton: QRadioButton
+    subjectLimbFRRadioButton: QRadioButton
+    subjectLimbHLRadioButton: QRadioButton
+    subjectLimbHRRadioButton: QRadioButton
+    subjectSpeedSpinBox: QDoubleSpinBox
+    subjectCommentsEdit: QLineEdit
     serialOutputWidget: QPlainTextEdit
     serialPortsComboBox: QComboBox
     plotView: pg.PlotWidget
@@ -79,13 +71,12 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         # noinspection PyArgumentList
         super(MainWindow, self).__init__()
-        uic.loadUi(script_root.joinpath("MainWindow.ui"), self)  # Load the .ui file
+        uic.loadUi(Path(__file__).parent.resolve() / "MainWindow.ui", self)  # Load the .ui file
 
         self.subjectIDMissingStylesheet = "background:red"
 
         self.basename = ""
         self.serial = None
-        self.sio = None
         self.file = None
         self.serial_ports = []
         self.list_serial_ports()
@@ -102,6 +93,9 @@ class MainWindow(QMainWindow):
         self.action_Quit.triggered.connect(self.close)
         self.subjectIDEdit.textEdited.connect(self.subject_id_edited)
 
+        self.LIMB_BUTTON_MAPPING = {self.subjectLimbFLRadioButton: 'FL', self.subjectLimbFRRadioButton: 'FR',
+                                    self.subjectLimbHLRadioButton: 'HL', self.subjectLimbHRRadioButton: 'HR'}
+
         self.plotItem: pg.PlotItem = self.plotView.getPlotItem()
         self.plotItem.setLabels(left="Force (gf)", bottom="Angle (deg)")
         self.plotItem.showGrid(x=True, y=True, alpha=0.5)
@@ -111,6 +105,8 @@ class MainWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.stop()
+
+        self._serial_buffer = ''
 
         self.show()  # Show the GUI
 
@@ -136,9 +132,6 @@ class MainWindow(QMainWindow):
                 return
             self.serial.reset_output_buffer()
             self.serial.reset_input_buffer()
-            # as advised in https://pyserial.readthedocs.io/en/latest/shortintro.html#eol
-            # noinspection PyTypeChecker
-            self.sio = io.TextIOWrapper(io.BufferedRWPair(self.serial, self.serial))
 
             self.serialConnectButton.setChecked(True)
             self.serialPortsComboBox.setEnabled(False)
@@ -165,22 +158,33 @@ class MainWindow(QMainWindow):
             self.startButton.setEnabled(False)
             self.statusbar.clearMessage()
 
-    def update(self) -> None:
-        logging.debug(f"Reading data from {self.serial}")
-        line = self.sio.readline()
-        logging.debug(f">> {line}")
-        if len(line) > 0:
-            self.serialOutputWidget.appendPlainText(line[:-1])
-            self.file.write(line)
+    def process_incoming_data(self, in_data, sep='\n'):
+        # since we are reading the data in chunks, there is no guarantee
+        # that we captured full lines, so we use a buffer and use only the full lines present in the buffer,
+        # the rest remaining the buffer for the next update() call
+        self._serial_buffer += in_data
+        # logger.debug(f"_serial_buffer = {self._serial_buffer}")
+        out_data, sep, after = self._serial_buffer.rpartition(sep)
+        self._serial_buffer = after
+        # logger.debug(f"kep '{self._serial_buffer}' in buffer, returning '{out_data}'")
+        return out_data
 
-        try:
-            _, _, x, y = line.split(",")
-            x, y = map(float, [x, y])
-            self.data = np.append(self.data, [[x, y]], axis=0)
-            self.curve.setData(self.data)
-        except ValueError:
-            logger.debug(f"Failed to convert {line} to float")
-            pass  # drop line if it cannot be converted to float
+    def update(self) -> None:
+        if self.serial.in_waiting > 0:
+            logger.debug(f"Reading data from {self.serial}")
+            out_data = self.process_incoming_data(self.serial.read(self.serial.in_waiting).decode())
+            if len(out_data) > 0:
+                self.serialOutputWidget.appendPlainText(out_data)
+                self.file.write(out_data)
+
+                try:
+                    data = np.genfromtxt(StringIO(out_data), delimiter=',', usecols=[2, 3])
+                    # logger.debug(f"Converted to numpy: {data}")
+                    self.data = np.append(self.data, np.atleast_2d(data), axis=0)
+                    self.curve.setData(self.data)
+                except ValueError as e:
+                    logger.debug(f"Failed to convert {out_data}: {e}")
+                    pass  # drop data if it cannot be converted to float
 
     def list_serial_ports(self):
         self.serial_ports = sorted(list_ports.comports())
@@ -219,7 +223,7 @@ class MainWindow(QMainWindow):
         # noinspection PyBroadException
         try:
             exporter = pg.exporters.ImageExporter(self.plotItem)
-            p = self.rootPath / f"{self.basename}.png"
+            p = self.rootPath / (self.basename+'.png')
             exporter.export(p.as_posix())
         except Exception as e:  # I'm not sure what kind of exception can be raised by the exported
             QMessageBox.Warning(
@@ -236,9 +240,14 @@ class MainWindow(QMainWindow):
         # we are ready to go at this point
         self.clear()
 
-        date = datetime.date.today().strftime(DATE_FORMAT)
-        self.basename = f"{date}_{self.subjectIDEdit.text()}"
-        filename = self.basename + ".csv"
+        filename = FILE_NAME_TEMPLATE.format(ID=self.subjectIDEdit.text(),
+                                             Age=self.subjectAgeSpinBox.value(),
+                                             Limb=self.LIMB_BUTTON_MAPPING[self.limbButtonGroup.checkedButton()],
+                                             Speed=self.subjectSpeedSpinBox.value(),
+                                             Comments=self.get_subject_comments(),
+                                             )
+        self.basename = filename
+        filename += '.csv'
         path = self.rootPath / filename
         if path.is_file():
             # noinspection PyArgumentList
@@ -311,9 +320,38 @@ class MainWindow(QMainWindow):
             self.serial.close()
         event.accept()
 
+    def get_subject_comments(self):
+        txt = self.subjectCommentsEdit.text()
+        if len(txt) > 0:
+            txt = txt.replace(' ', '-')
+            txt = txt.replace('_', '-')
+            txt = '_' + txt
+        return txt
+
 
 if __name__ == "__main__":
-    logging.debug("in main.")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="increase verbosity of output (can be "
+             "repeated to increase verbosity further)",
+    )
+    parser.add_argument(
+        "--log-file",
+        help="file in which the log is written. "
+             "If absent or None, log is directed to stdout",
+        default=None,
+    )
+    args = parser.parse_args()
+
+    level = LOGGING_LEVELS[
+        min(args.verbose, len(LOGGING_LEVELS) - 1)
+    ]  # cap to last level index
+    logger.setLevel(level=level)
+
     app = QApplication([])
     win = MainWindow()
     win.setWindowTitle("Torque Meter")
