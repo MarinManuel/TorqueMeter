@@ -36,3 +36,4 @@
 *.FCStd1
 build/
 dist/
+.ipynb_checkpoints/
