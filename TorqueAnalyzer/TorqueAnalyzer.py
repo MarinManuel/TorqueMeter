@@ -8,7 +8,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import openpyxl
 import scipy.stats as st
 import seaborn as sns
 from PySide6.QtCore import QDate, Qt
