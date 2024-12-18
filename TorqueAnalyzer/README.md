@@ -1,0 +1,2 @@
+# Resources
+<a target="_blank" href="https://icons8.com/icon/4r5HpCBBbNn8/next-page">Next</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>. <a target="_blank" href="https://icons8.com/icon/LeIi2nYOolQt/back-to">Previous</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>. <a target="_blank" href="https://icons8.com/icon/Y5jV4wJL13np/open-folder">Open Folder</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>

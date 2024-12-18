@@ -34,3 +34,5 @@
 .idea
 .vscode
 *.FCStd1
+build/
+dist/

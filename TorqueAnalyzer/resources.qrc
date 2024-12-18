@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="icons">
+    <file alias="rabbit">Resources/icons8-rabbit-40.png</file>
+    <file alias="summary">Resources/icons8-spreadsheet-48.png</file>
+    <file alias="open_folder">Resources/icons8-open-folder-32.png</file>
+    <file alias="next">Resources/icons8-next-64.png</file>
+    <file alias="previous">Resources/icons8-previous-64.png</file>
+  </qresource>
+</RCC>

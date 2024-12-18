@@ -24,12 +24,17 @@ from PyQt5.QtWidgets import (
     QGroupBox,
     QMessageBox,
     QMainWindow,
-    QApplication, QAction, QSpinBox, QButtonGroup, QDoubleSpinBox, QRadioButton,
+    QApplication,
+    QAction,
+    QSpinBox,
+    QButtonGroup,
+    QDoubleSpinBox,
+    QRadioButton,
 )
 from serial.tools import list_ports
 
 UPDATE_PERIOD = 100  # in ms
-FILE_NAME_TEMPLATE = '{ID}_P{Age:d}_{Limb}_{Speed}s{Comments}'
+FILE_NAME_TEMPLATE = "{ID}_P{Age:d}_{Limb}_{Speed}s{Comments}"
 
 logger = logging.getLogger("TorquePlotter")
 handler = logging.StreamHandler()
@@ -71,7 +76,9 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         # noinspection PyArgumentList
         super(MainWindow, self).__init__()
-        uic.loadUi(Path(__file__).parent.resolve() / "MainWindow.ui", self)  # Load the .ui file
+        uic.loadUi(
+            Path(__file__).parent.resolve() / "ui_mainwindow.ui", self
+        )  # Load the .ui file
 
         self.subjectIDMissingStylesheet = "background:red"
 
@@ -93,8 +100,12 @@ class MainWindow(QMainWindow):
         self.action_Quit.triggered.connect(self.close)
         self.subjectIDEdit.textEdited.connect(self.subject_id_edited)
 
-        self.LIMB_BUTTON_MAPPING = {self.subjectLimbFLRadioButton: 'FL', self.subjectLimbFRRadioButton: 'FR',
-                                    self.subjectLimbHLRadioButton: 'HL', self.subjectLimbHRRadioButton: 'HR'}
+        self.LIMB_BUTTON_MAPPING = {
+            self.subjectLimbFLRadioButton: "FL",
+            self.subjectLimbFRRadioButton: "FR",
+            self.subjectLimbHLRadioButton: "HL",
+            self.subjectLimbHRRadioButton: "HR",
+        }
 
         self.plotItem: pg.PlotItem = self.plotView.getPlotItem()
         self.plotItem.setLabels(left="Force (gf)", bottom="Angle (deg)")
@@ -106,7 +117,7 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.update)
         self.timer.stop()
 
-        self._serial_buffer = ''
+        self._serial_buffer = ""
 
         self.show()  # Show the GUI
 
@@ -158,7 +169,7 @@ class MainWindow(QMainWindow):
             self.startButton.setEnabled(False)
             self.statusbar.clearMessage()
 
-    def process_incoming_data(self, in_data, sep='\n'):
+    def process_incoming_data(self, in_data, sep="\n"):
         # since we are reading the data in chunks, there is no guarantee
         # that we captured full lines, so we use a buffer and use only the full lines present in the buffer,
         # the rest remaining the buffer for the next update() call
@@ -172,13 +183,17 @@ class MainWindow(QMainWindow):
     def update(self) -> None:
         if self.serial.in_waiting > 0:
             logger.debug(f"Reading data from {self.serial}")
-            out_data = self.process_incoming_data(self.serial.read(self.serial.in_waiting).decode())
+            out_data = self.process_incoming_data(
+                self.serial.read(self.serial.in_waiting).decode()
+            )
             if len(out_data) > 0:
                 self.serialOutputWidget.appendPlainText(out_data)
                 self.file.write(out_data)
 
                 try:
-                    data = np.genfromtxt(StringIO(out_data), delimiter=',', usecols=[2, 3])
+                    data = np.genfromtxt(
+                        StringIO(out_data), delimiter=",", usecols=[2, 3]
+                    )
                     # logger.debug(f"Converted to numpy: {data}")
                     self.data = np.append(self.data, np.atleast_2d(data), axis=0)
                     self.curve.setData(self.data)
@@ -223,9 +238,11 @@ class MainWindow(QMainWindow):
         # noinspection PyBroadException
         try:
             exporter = pg.exporters.ImageExporter(self.plotItem)
-            p = self.rootPath / (self.basename+'.png')
+            p = self.rootPath / (self.basename + ".png")
             exporter.export(p.as_posix())
-        except Exception as e:  # I'm not sure what kind of exception can be raised by the exported
+        except (
+            Exception
+        ) as e:  # I'm not sure what kind of exception can be raised by the exported
             QMessageBox.Warning(
                 self, "Cannot save image", f"The image could not be saved\n{str(e)}"
             )
@@ -240,14 +257,15 @@ class MainWindow(QMainWindow):
         # we are ready to go at this point
         self.clear()
 
-        filename = FILE_NAME_TEMPLATE.format(ID=self.subjectIDEdit.text(),
-                                             Age=self.subjectAgeSpinBox.value(),
-                                             Limb=self.LIMB_BUTTON_MAPPING[self.limbButtonGroup.checkedButton()],
-                                             Speed=self.subjectSpeedSpinBox.value(),
-                                             Comments=self.get_subject_comments(),
-                                             )
+        filename = FILE_NAME_TEMPLATE.format(
+            ID=self.subjectIDEdit.text(),
+            Age=self.subjectAgeSpinBox.value(),
+            Limb=self.LIMB_BUTTON_MAPPING[self.limbButtonGroup.checkedButton()],
+            Speed=self.subjectSpeedSpinBox.value(),
+            Comments=self.get_subject_comments(),
+        )
         self.basename = filename
-        filename += '.csv'
+        filename += ".csv"
         path = self.rootPath / filename
         if path.is_file():
             # noinspection PyArgumentList
@@ -291,11 +309,13 @@ class MainWindow(QMainWindow):
                 self.data = data
                 self.curve.setData(data)
                 self.plotItem.setTitle(filename)
-                with open(filename, 'r') as f:
+                with open(filename, "r") as f:
                     self.serialOutputWidget.setPlainText(f.read())
         except Exception as e:
             # noinspection PyArgumentList
-            QMessageBox.warning(self, "ERROR", f"Could not read file {filename}\n{str(e)}")
+            QMessageBox.warning(
+                self, "ERROR", f"Could not read file {filename}\n{str(e)}"
+            )
             logger.debug(f"Failed to read data from file <{filename}>\n{str(e)}")
 
     def browse_file(self):
@@ -305,7 +325,10 @@ class MainWindow(QMainWindow):
             root = Path.cwd()
         # noinspection PyArgumentList
         filename, _ = dialog.getOpenFileName(
-            self, caption="Open data file", directory=root.as_posix(), filter="Text files (*.txt *.csv);;All files (*)"
+            self,
+            caption="Open data file",
+            directory=root.as_posix(),
+            filter="Text files (*.txt *.csv);;All files (*)",
         )
         filename = Path(filename).resolve().as_posix()
         return filename
@@ -323,9 +346,9 @@ class MainWindow(QMainWindow):
     def get_subject_comments(self):
         txt = self.subjectCommentsEdit.text()
         if len(txt) > 0:
-            txt = txt.replace(' ', '-')
-            txt = txt.replace('_', '-')
-            txt = '_' + txt
+            txt = txt.replace(" ", "-")
+            txt = txt.replace("_", "-")
+            txt = "_" + txt
         return txt
 
 
@@ -337,12 +360,12 @@ if __name__ == "__main__":
         action="count",
         default=0,
         help="increase verbosity of output (can be "
-             "repeated to increase verbosity further)",
+        "repeated to increase verbosity further)",
     )
     parser.add_argument(
         "--log-file",
         help="file in which the log is written. "
-             "If absent or None, log is directed to stdout",
+        "If absent or None, log is directed to stdout",
         default=None,
     )
     args = parser.parse_args()
