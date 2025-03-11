@@ -111,13 +111,17 @@ def read_torque_data(filename, column_names=None, arm_length=TORQUE_ARM_LENGTH):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             # noinspection PyTypeChecker
-            df = pd.read_excel(filename, usecols=range(0, len(column_names)))
+            df = pd.read_excel(filename)
     elif Path(filename).suffix == ".csv":
         df = pd.read_csv(
-            filename, usecols=range(0, len(column_names)), on_bad_lines="warn"
+            filename, on_bad_lines="warn"
         )
     else:
         raise ValueError(f"Cannot parse files with extension {filename}")
+    # There was a change between 2023 and 2024 where we switched from a 3 col format to a 4 col format
+    if len(df.columns)>3:
+        df.drop(columns=df.columns[0], inplace=True)
+    
     df.columns = column_names
     df["Torque"] = df["Force"] * arm_length
     return df
@@ -449,9 +453,13 @@ class MainWindow(QMainWindow):
             self.result_df.loc[self.current_idx, "Age"] = int(temp["Age"])  # int
             self.result_df.loc[self.current_idx, "Limb"] = temp["Limb"]  # str
             self.result_df.loc[self.current_idx, "Side"] = temp["Side"]  # str
-            self.result_df.loc[self.current_idx, "Speed"] = float(
-                temp["Speed"]
-            )  # float
+            # fix to handle the fact that some filename contain a unit and some don't
+            m = re.match('\d+', temp['Speed'])
+            if m:
+                speed = float(m.group(0))
+            else:
+                speed = pd.NA
+            self.result_df.loc[self.current_idx, "Speed"] = speed  # float
             self.result_df.loc[self.current_idx, "Comments"] = temp["Comments"]  # str
             self.result_df.loc[self.current_idx, "Filename"] = str(relative_filename)
             self.result_df.loc[self.current_idx, "Filtered"] = 0
