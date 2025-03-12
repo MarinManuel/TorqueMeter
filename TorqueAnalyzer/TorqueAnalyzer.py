@@ -22,7 +22,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 
-from ui_mainwindow import Ui_MainWindow
+from ui_mainwindow_ui import Ui_MainWindow
 
 TORQUE_FILES_EXTENSIONS = [".xlsx", ".csv"]
 TORQUE_DATA_FILENAME_RE = re.compile(
@@ -44,6 +44,7 @@ RESULT_FIELDS = {
     "Filtered": int,
     "Cycles": str,
     "Rejected": bool,
+    "Validated": bool,
     "Slope": float,
     "R": float,
 }
@@ -118,7 +119,10 @@ def read_torque_data(filename, column_names=None, arm_length=TORQUE_ARM_LENGTH):
         )
     else:
         raise ValueError(f"Cannot parse files with extension {filename}")
-    # There was a change between 2023 and 2024 where we switched from a 3 col format to a 4 col format
+    #
+    # There was a change between 2023 and 2024 where 
+    # we switched from a 3 col format to a 4 col format
+    #
     if len(df.columns)>3:
         df.drop(columns=df.columns[0], inplace=True)
     
@@ -251,6 +255,7 @@ class MainWindow(QMainWindow):
         self.ui.outlierThresholdSpinBox.valueChanged.connect(
             self.outlier_threshold_changed
         )
+        self.ui.validateButton.clicked.connect(self.save_file)
         self.ui.cyclesToKeepEdit.textChanged.connect(self.cycles_edit_changed)
         self.ui.rejectFileButton.clicked.connect(self.reject_button_clicked)
         self.cid = self.canvas.mpl_connect("button_press_event", self.on_plot_clicked)
@@ -340,6 +345,7 @@ class MainWindow(QMainWindow):
         self.update_torque_analysis()
 
     def reject_button_clicked(self, checked):
+        self.result_df.loc[self.current_idx, "Validated"] = checked
         self.result_df.loc[self.current_idx, "Rejected"] = checked
         self.next_file_button_clicked()
 
@@ -392,12 +398,14 @@ class MainWindow(QMainWindow):
         )
 
         if filter_already_analyzed and self.result_df is not None:
+            # This removes the files that are already in the database,
+            # but only if they have been accepted
             file_list = sorted(
-                filter(
-                    lambda x: str(x.relative_to(self.data_files_root_folder))
-                    not in self.result_df["Filename"].values,
-                    file_list,
-                )
+            filter(
+                lambda x: str(x.relative_to(self.data_files_root_folder)) 
+                not in self.result_df[self.result_df["Validated"] == True]["Filename"].values,
+                file_list,
+            )
             )
 
         return list(file_list)
@@ -487,7 +495,12 @@ class MainWindow(QMainWindow):
         )
         self.result_df.loc[self.current_idx, "Slope"] = slope
         self.result_df.loc[self.current_idx, "R"] = r
+        self.result_df.loc[self.current_idx, "Validated"] = False
         self.update_torque_gui()
+        # self.result_df.to_excel(self.result_file_path, index=False)  # FIXME: move saving to own action
+    
+    def save_file(self):
+        self.result_df.loc[self.current_idx, "Validated"] = True
         self.result_df.to_excel(self.result_file_path, index=False)
 
     def update_torque_gui(self):

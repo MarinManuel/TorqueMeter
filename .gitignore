@@ -37,3 +37,4 @@
 build/
 dist/
 .ipynb_checkpoints/
+__pycache__/

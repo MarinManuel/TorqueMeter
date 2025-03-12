@@ -15,12 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QDateEdit,
-    QDoubleSpinBox, QFormLayout, QFrame, QGridLayout,
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMenuBar, QPushButton, QSizePolicy,
-    QSpacerItem, QSpinBox, QStatusBar, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QDateEdit, QDoubleSpinBox,
+    QFormLayout, QFrame, QGridLayout, QGroupBox,
+    QHBoxLayout, QLabel, QLineEdit, QMainWindow,
+    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
+    QSpinBox, QStatusBar, QVBoxLayout, QWidget)
 import resources_rc
 
 class Ui_MainWindow(object):
@@ -156,6 +155,12 @@ class Ui_MainWindow(object):
         self.analysisGroupBox.setEnabled(False)
         self.gridLayout_2 = QGridLayout(self.analysisGroupBox)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.cyclesToKeepEdit = QLineEdit(self.analysisGroupBox)
+        self.cyclesToKeepEdit.setObjectName(u"cyclesToKeepEdit")
+        self.cyclesToKeepEdit.setReadOnly(True)
+
+        self.gridLayout_2.addWidget(self.cyclesToKeepEdit, 1, 1, 1, 2)
+
         self.label_9 = QLabel(self.analysisGroupBox)
         self.label_9.setObjectName(u"label_9")
 
@@ -166,20 +171,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout_2.addWidget(self.removeOutliersCheckBox, 0, 0, 1, 2)
 
-        self.cyclesToKeepEdit = QLineEdit(self.analysisGroupBox)
-        self.cyclesToKeepEdit.setObjectName(u"cyclesToKeepEdit")
-        self.cyclesToKeepEdit.setReadOnly(True)
-
-        self.gridLayout_2.addWidget(self.cyclesToKeepEdit, 1, 1, 1, 2)
-
-        self.outlierThresholdSpinBox = QDoubleSpinBox(self.analysisGroupBox)
-        self.outlierThresholdSpinBox.setObjectName(u"outlierThresholdSpinBox")
-        self.outlierThresholdSpinBox.setEnabled(False)
-        self.outlierThresholdSpinBox.setDecimals(2)
-        self.outlierThresholdSpinBox.setValue(2.000000000000000)
-
-        self.gridLayout_2.addWidget(self.outlierThresholdSpinBox, 0, 2, 1, 1)
-
         self.rejectFileButton = QPushButton(self.analysisGroupBox)
         self.rejectFileButton.setObjectName(u"rejectFileButton")
         self.rejectFileButton.setStyleSheet(u"QPushButton{ background: rgb(255, 170, 127);}\n"
@@ -189,6 +180,103 @@ class Ui_MainWindow(object):
         self.rejectFileButton.setFlat(False)
 
         self.gridLayout_2.addWidget(self.rejectFileButton, 2, 0, 1, 3)
+
+        self.outlierThresholdSpinBox = QDoubleSpinBox(self.analysisGroupBox)
+        self.outlierThresholdSpinBox.setObjectName(u"outlierThresholdSpinBox")
+        self.outlierThresholdSpinBox.setEnabled(False)
+        self.outlierThresholdSpinBox.setDecimals(2)
+        self.outlierThresholdSpinBox.setValue(2.000000000000000)
+
+        self.gridLayout_2.addWidget(self.outlierThresholdSpinBox, 0, 2, 1, 1)
+
+        self.validateButton = QPushButton(self.analysisGroupBox)
+        self.validateButton.setObjectName(u"validateButton")
+        self.validateButton.setEnabled(False)
+        palette = QPalette()
+        brush = QBrush(QColor(0, 0, 0, 255))
+        brush.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.WindowText, brush)
+        brush1 = QBrush(QColor(85, 170, 127, 255))
+        brush1.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.Button, brush1)
+        brush2 = QBrush(QColor(127, 255, 191, 255))
+        brush2.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.Light, brush2)
+        brush3 = QBrush(QColor(106, 212, 159, 255))
+        brush3.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.Midlight, brush3)
+        brush4 = QBrush(QColor(42, 85, 64, 255))
+        brush4.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.Dark, brush4)
+        brush5 = QBrush(QColor(57, 113, 85, 255))
+        brush5.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.Mid, brush5)
+        palette.setBrush(QPalette.Active, QPalette.Text, brush)
+        brush6 = QBrush(QColor(255, 255, 255, 255))
+        brush6.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.BrightText, brush6)
+        palette.setBrush(QPalette.Active, QPalette.ButtonText, brush)
+        palette.setBrush(QPalette.Active, QPalette.Base, brush6)
+        palette.setBrush(QPalette.Active, QPalette.Window, brush1)
+        palette.setBrush(QPalette.Active, QPalette.Shadow, brush)
+        brush7 = QBrush(QColor(170, 212, 191, 255))
+        brush7.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.AlternateBase, brush7)
+        brush8 = QBrush(QColor(255, 255, 220, 255))
+        brush8.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Active, QPalette.ToolTipBase, brush8)
+        palette.setBrush(QPalette.Active, QPalette.ToolTipText, brush)
+        brush9 = QBrush(QColor(0, 0, 0, 127))
+        brush9.setStyle(Qt.SolidPattern)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette.setBrush(QPalette.Active, QPalette.PlaceholderText, brush9)
+#endif
+        palette.setBrush(QPalette.Active, QPalette.Accent, brush6)
+        palette.setBrush(QPalette.Inactive, QPalette.WindowText, brush)
+        palette.setBrush(QPalette.Inactive, QPalette.Button, brush1)
+        palette.setBrush(QPalette.Inactive, QPalette.Light, brush2)
+        palette.setBrush(QPalette.Inactive, QPalette.Midlight, brush3)
+        palette.setBrush(QPalette.Inactive, QPalette.Dark, brush4)
+        palette.setBrush(QPalette.Inactive, QPalette.Mid, brush5)
+        palette.setBrush(QPalette.Inactive, QPalette.Text, brush)
+        palette.setBrush(QPalette.Inactive, QPalette.BrightText, brush6)
+        palette.setBrush(QPalette.Inactive, QPalette.ButtonText, brush)
+        palette.setBrush(QPalette.Inactive, QPalette.Base, brush6)
+        palette.setBrush(QPalette.Inactive, QPalette.Window, brush1)
+        palette.setBrush(QPalette.Inactive, QPalette.Shadow, brush)
+        palette.setBrush(QPalette.Inactive, QPalette.AlternateBase, brush7)
+        palette.setBrush(QPalette.Inactive, QPalette.ToolTipBase, brush8)
+        palette.setBrush(QPalette.Inactive, QPalette.ToolTipText, brush)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette.setBrush(QPalette.Inactive, QPalette.PlaceholderText, brush9)
+#endif
+        palette.setBrush(QPalette.Inactive, QPalette.Accent, brush6)
+        palette.setBrush(QPalette.Disabled, QPalette.WindowText, brush4)
+        palette.setBrush(QPalette.Disabled, QPalette.Button, brush1)
+        palette.setBrush(QPalette.Disabled, QPalette.Light, brush2)
+        palette.setBrush(QPalette.Disabled, QPalette.Midlight, brush3)
+        palette.setBrush(QPalette.Disabled, QPalette.Dark, brush4)
+        palette.setBrush(QPalette.Disabled, QPalette.Mid, brush5)
+        palette.setBrush(QPalette.Disabled, QPalette.Text, brush4)
+        palette.setBrush(QPalette.Disabled, QPalette.BrightText, brush6)
+        palette.setBrush(QPalette.Disabled, QPalette.ButtonText, brush4)
+        palette.setBrush(QPalette.Disabled, QPalette.Base, brush1)
+        palette.setBrush(QPalette.Disabled, QPalette.Window, brush1)
+        palette.setBrush(QPalette.Disabled, QPalette.Shadow, brush)
+        palette.setBrush(QPalette.Disabled, QPalette.AlternateBase, brush1)
+        palette.setBrush(QPalette.Disabled, QPalette.ToolTipBase, brush8)
+        palette.setBrush(QPalette.Disabled, QPalette.ToolTipText, brush)
+        brush10 = QBrush(QColor(42, 85, 64, 127))
+        brush10.setStyle(Qt.SolidPattern)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+        palette.setBrush(QPalette.Disabled, QPalette.PlaceholderText, brush10)
+#endif
+        brush11 = QBrush(QColor(110, 221, 165, 255))
+        brush11.setStyle(Qt.SolidPattern)
+        palette.setBrush(QPalette.Disabled, QPalette.Accent, brush11)
+        self.validateButton.setPalette(palette)
+
+        self.gridLayout_2.addWidget(self.validateButton, 3, 0, 1, 3)
 
 
         self.verticalLayout.addWidget(self.analysisGroupBox)
@@ -317,12 +405,13 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.removeOutliersCheckBox.setShortcut(QCoreApplication.translate("MainWindow", u"O", None))
 #endif // QT_CONFIG(shortcut)
-        self.outlierThresholdSpinBox.setPrefix(QCoreApplication.translate("MainWindow", u"> ", None))
-        self.outlierThresholdSpinBox.setSuffix(QCoreApplication.translate("MainWindow", u" \u03c3", None))
         self.rejectFileButton.setText(QCoreApplication.translate("MainWindow", u"&Reject File", None))
 #if QT_CONFIG(shortcut)
         self.rejectFileButton.setShortcut(QCoreApplication.translate("MainWindow", u"R", None))
 #endif // QT_CONFIG(shortcut)
+        self.outlierThresholdSpinBox.setPrefix(QCoreApplication.translate("MainWindow", u"> ", None))
+        self.outlierThresholdSpinBox.setSuffix(QCoreApplication.translate("MainWindow", u" \u03c3", None))
+        self.validateButton.setText(QCoreApplication.translate("MainWindow", u"V&alidate && Next", None))
 #if QT_CONFIG(statustip)
         self.prevFileButton.setStatusTip(QCoreApplication.translate("MainWindow", u"Load previous file", None))
 #endif // QT_CONFIG(statustip)
