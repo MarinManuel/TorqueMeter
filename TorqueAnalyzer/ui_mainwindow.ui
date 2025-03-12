@@ -236,7 +236,7 @@
 QPushButton:checked{ background: rgb(255, 0, 0);}</string>
             </property>
             <property name="text">
-             <string>&amp;Reject File</string>
+             <string>&amp;Reject &amp;&amp; Next</string>
             </property>
             <property name="shortcut">
              <string>R</string>
@@ -274,7 +274,7 @@ QPushButton:checked{ background: rgb(255, 0, 0);}</string>
           <item row="3" column="0" colspan="3">
            <widget class="QPushButton" name="validateButton">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="palette">
              <palette>
@@ -747,6 +747,9 @@ QPushButton:checked{ background: rgb(255, 0, 0);}</string>
             </property>
             <property name="text">
              <string>V&amp;alidate &amp;&amp; Next</string>
+            </property>
+            <property name="shortcut">
+             <string>A</string>
             </property>
            </widget>
           </item>

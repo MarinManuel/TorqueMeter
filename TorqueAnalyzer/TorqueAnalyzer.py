@@ -253,160 +253,18 @@ class MainWindow(QMainWindow):
         self.ui.outlierThresholdSpinBox.valueChanged.connect(
             self.outlier_threshold_changed
         )
-        self.ui.validateButton.clicked.connect(self.save_file)
+        self.ui.validateButton.clicked.connect(self.validate_button_clicked)
         self.ui.cyclesToKeepEdit.textChanged.connect(self.cycles_edit_changed)
         self.ui.rejectFileButton.clicked.connect(self.reject_button_clicked)
         self.cid = self.canvas.mpl_connect("button_press_event", self.on_plot_clicked)
-
-    def on_plot_clicked(self, event: MouseEvent):
-        if event.dblclick and event.inaxes in self.figure.axes[:2]:
-            logger.debug(f"MouseEvent: {event}")
-            # df = read_torque_data(
-            #     self.data_files_root_folder
-            #     / self.result_df.loc[self.current_idx, "Filename"]
-            # )
-            angle_data = self.figure.axes[1].lines[0].get_ydata()
-            cycle_lims = get_angle_cycles(angle_data)
-            for i, (s, t) in enumerate(cycle_lims):
-                if s <= event.xdata < t:
-                    # click in cycle # i
-                    logger.debug(f"Double click in cycle # {i}")
-                    cycles_to_keep = parse_cycle_str(
-                        self.result_df.loc[self.current_idx, "Cycles"]
-                    )
-                    if i in cycles_to_keep:
-                        # remove i
-                        cycles_to_keep.pop(cycles_to_keep.index(i))
-                    else:
-                        # add cycle i to list to keep
-                        cycles_to_keep = sorted(cycles_to_keep + [i])
-                    self.result_df.loc[self.current_idx, "Cycles"] = ",".join(
-                        map(str, cycles_to_keep)
-                    )
-                    self.update_torque_analysis()
-                    self.update_torque_gui()
-                    break
-
-    def open_result_file_button_clicked(self):
-        self.result_file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Summary File",
-            "",
-            filter="Summary Files (*.xlsx)",
-            options=QFileDialog.Option.DontConfirmOverwrite,
-        )
-        self.result_file_path = Path(self.result_file_path)
-        if self.result_file_path.exists():
-            self.result_df = pd.read_excel(self.result_file_path)
-            logger.info(
-                f"Loaded result file {self.result_file_path} with {len(self.result_df)} entries"
-            )
-        else:
-            self.result_df = pd.DataFrame(columns=list(RESULT_FIELDS.keys())).astype(
-                RESULT_FIELDS
-            )
-            logger.info(f"created new result file {self.result_file_path}")
-        self.ui.openDataFolderButton.setEnabled(True)
-        self.ui.dataFolderPathEdit.setEnabled(True)
-
-    def open_data_folder_button_clicked(self):
-        self.torque_file_list = self.get_torque_files(
-            filter_already_analyzed=self.ui.skipAlreadyAnalyzedCheckBox.isChecked()
-        )
-        if len(self.torque_file_list) > 0:
-            self.ui.currentFileSpinBox.setMaximum(len(self.torque_file_list))
-            self.ui.currentFileSpinBox.setSuffix(f" / {len(self.torque_file_list)}")
-            # self.ui.fileInfoGroupBox.setEnabled(True)
-            self.ui.analysisGroupBox.setEnabled(True)
-            self.current_file = 0
-            self.process_current_file()
-
-    def remove_outlier_checkbox_changed(self, checked):
-        if checked:
-            self.ui.outlierThresholdSpinBox.setEnabled(True)
-            if np.isclose(self.ui.outlierThresholdSpinBox.value(), 0):
-                self.ui.outlierThresholdSpinBox.setValue(DEFAULT_OUTLIER_THRESHOLD)
-            self.result_df.loc[self.current_idx, "Filtered"] = (
-                self.ui.outlierThresholdSpinBox.value()
-            )
-        else:
-            self.ui.outlierThresholdSpinBox.setEnabled(False)
-            self.result_df.loc[self.current_idx, "Filtered"] = 0
-        self.update_torque_analysis()
-
-    def outlier_threshold_changed(self, val):
-        self.result_df.loc[self.current_idx, "Filtered"] = val
-        self.update_torque_analysis()
 
     def cycles_edit_changed(self, text):
         self.result_df.loc[self.current_idx, "Cycles"] = text
         self.update_torque_analysis()
 
-    def reject_button_clicked(self, checked):
-        self.result_df.loc[self.current_idx, "Validated"] = checked
-        self.result_df.loc[self.current_idx, "Rejected"] = checked
-        self.next_file_button_clicked()
-
-    def skip_already_analyzed_clicked(self, checked):
-        self.torque_file_list = self.get_torque_files(filter_already_analyzed=checked)
-        self.ui.currentFileSpinBox.setMaximum(len(self.torque_file_list))
-        self.ui.currentFileSpinBox.setSuffix(f" / {len(self.torque_file_list)}")
-        self.process_current_file()
-
-    def next_file_button_clicked(self):
-        self.current_file = constrain(
-            self.current_file + 1, 0, len(self.torque_file_list) - 1
-        )
-        relative_filename = Path(self.torque_file_list[self.current_file]).relative_to(
-            self.data_files_root_folder
-        )
-        self.current_idx = self.get_file_idx(relative_filename)
-        self.ui.currentFileSpinBox.setValue(self.current_file)
-        self.process_current_file()
-
-    def prev_file_button_clicked(self):
-        self.current_file = constrain(
-            self.current_file - 1, 0, len(self.torque_file_list) - 1
-        )
-        relative_filename = Path(self.torque_file_list[self.current_file]).relative_to(
-            self.data_files_root_folder
-        )
-        self.current_idx = self.get_file_idx(relative_filename)
-        self.ui.currentFileSpinBox.setValue(self.current_file)
-        self.process_current_file()
-
     def current_file_spinner_changed(self, val):
         self.current_file = constrain(val, 0, len(self.torque_file_list) - 1)
         self.process_current_file()
-
-    def get_root_folder(self):
-        root_folder = QFileDialog.getExistingDirectory(
-            self, "Open Folder with torque files", "", QFileDialog.Option.ShowDirsOnly
-        )
-        return root_folder
-
-    def get_torque_files(self, filter_already_analyzed=True):
-        if self.data_files_root_folder is None:
-            self.data_files_root_folder = Path(self.get_root_folder())
-        file_list = sorted(
-            filter(
-                lambda path: path.suffix in TORQUE_FILES_EXTENSIONS,
-                self.data_files_root_folder.glob("**/*"),
-            )
-        )
-
-        if filter_already_analyzed and self.result_df is not None:
-            # This removes the files that are already in the database,
-            # but only if they have been accepted
-            file_list = sorted(
-            filter(
-                lambda x: str(x.relative_to(self.data_files_root_folder)) 
-                not in self.result_df[self.result_df["Validated"] == True]["Filename"].values,
-                file_list,
-            )
-            )
-
-        return list(file_list)
 
     def get_file_idx(self, relative_filename):
         """
@@ -437,107 +295,112 @@ class MainWindow(QMainWindow):
         logger.debug(f"Creating new idx: [{idx}]")
         return idx
 
-    def process_current_file(self):
-        filename = self.torque_file_list[self.current_file]
-        relative_filename = filename.relative_to(self.data_files_root_folder)
-        logger.debug(f"Processing file [{self.current_file}][{filename}]")
-        idx = self.get_file_idx(relative_filename)
-        if idx is None:
-            # no data in the database,
-            self.current_idx = self.get_next_file_idx()
-            temp = parse_torque_filename(filename.name)
-            expDate = None
-            for part in relative_filename.parts:
-                try:
-                    expDate = datetime.date.fromisoformat(part)
-                    break
-                except ValueError:
-                    expDate = None
+    def get_root_folder(self):
+        root_folder = QFileDialog.getExistingDirectory(
+            self, "Open Folder with torque files", "", QFileDialog.Option.ShowDirsOnly
+        )
+        return root_folder
 
-            self.result_df.loc[self.current_idx, "ID"] = temp["ID"]  # str
-            self.result_df.loc[self.current_idx, "ExpDate"] = pd.to_datetime(expDate)
-            self.result_df.loc[self.current_idx, "Age"] = int(temp["Age"])  # int
-            self.result_df.loc[self.current_idx, "Limb"] = temp["Limb"]  # str
-            self.result_df.loc[self.current_idx, "Side"] = temp["Side"]  # str
-            # fix to handle the fact that some filename contain a unit and some don't
-            m = re.match('\d+', temp['Speed'])
-            if m:
-                speed = float(m.group(0))
-            else:
-                speed = pd.NA
-            self.result_df.loc[self.current_idx, "Speed"] = speed  # float
-            self.result_df.loc[self.current_idx, "Comments"] = temp["Comments"]  # str
-            self.result_df.loc[self.current_idx, "Filename"] = str(relative_filename)
-            self.result_df.loc[self.current_idx, "Filtered"] = 0
-            df = read_torque_data(filename)
-            cycles = range(0, len(get_angle_cycles(df["Angle"])))
-            cycles_str = ",".join(map(str, cycles))
-            self.result_df.loc[self.current_idx, "Cycles"] = cycles_str
-            self.result_df.loc[self.current_idx, "Rejected"] = False
-        self.update_torque_analysis()
-        self.update_torque_gui()
+    def get_torque_files(self, filter_already_analyzed=True):
+        if self.data_files_root_folder is None:
+            self.data_files_root_folder = Path(self.get_root_folder())
+        file_list = sorted(
+            filter(
+                lambda path: path.suffix in TORQUE_FILES_EXTENSIONS,
+                self.data_files_root_folder.glob("**/*"),
+            )
+        )
 
-    def update_torque_analysis(self):
-        """
-        recomputes the slope and r values based on current filtered state and selected cycles
-        :return: None
-        """
-        filename = (
+        if filter_already_analyzed and self.result_df is not None:
+            # This removes the files that are already in the database,
+            # but only if they have been accepted
+            file_list = sorted(
+            filter(
+                lambda x: str(x.relative_to(self.data_files_root_folder)) 
+                not in self.result_df[self.result_df["Validated"] == True]["Filename"].values,
+                file_list,
+            )
+            )
+
+        return list(file_list)
+
+    def next_file_button_clicked(self):
+        self.current_file = constrain(
+            self.current_file + 1, 0, len(self.torque_file_list) - 1
+        )
+        relative_filename = Path(self.torque_file_list[self.current_file]).relative_to(
             self.data_files_root_folder
-            / self.result_df.loc[self.current_idx, "Filename"]
         )
-        filter_threshold = self.result_df.loc[self.current_idx, "Filtered"]
-        cycles = parse_cycle_str(self.result_df.loc[self.current_idx, "Cycles"])
-        slope, r = analyze_torque_file(
-            filename, filter_threshold=filter_threshold, cycles=cycles
-        )
-        self.result_df.loc[self.current_idx, "Slope"] = slope
-        self.result_df.loc[self.current_idx, "R"] = r
-        self.result_df.loc[self.current_idx, "Validated"] = False
-        self.update_torque_gui()
-        # self.result_df.to_excel(self.result_file_path, index=False)  # FIXME: move saving to own action
-    
-    def save_file(self):
-        self.result_df.loc[self.current_idx, "Validated"] = True
-        self.result_df.to_excel(self.result_file_path, index=False)
+        self.current_idx = self.get_file_idx(relative_filename)
+        self.ui.currentFileSpinBox.setValue(self.current_file)
+        self.process_current_file()
 
-    def update_torque_gui(self):
-        self.ui.currentFileSpinBox.setValue(int(self.current_file))
-        self.ui.expDateEdit.setDate(
-            QDate.fromString(
-                str(self.result_df.loc[self.current_idx, "ExpDate"]),
-                Qt.DateFormat.ISODate,
+    def on_plot_clicked(self, event: MouseEvent):
+        if event.dblclick and event.inaxes in self.figure.axes[:2]:
+            logger.debug(f"MouseEvent: {event}")
+            # df = read_torque_data(
+            #     self.data_files_root_folder
+            #     / self.result_df.loc[self.current_idx, "Filename"]
+            # )
+            angle_data = self.figure.axes[1].lines[0].get_ydata()
+            cycle_lims = get_angle_cycles(angle_data)
+            for i, (s, t) in enumerate(cycle_lims):
+                if s <= event.xdata < t:
+                    # click in cycle # i
+                    logger.debug(f"Double click in cycle # {i}")
+                    cycles_to_keep = parse_cycle_str(
+                        self.result_df.loc[self.current_idx, "Cycles"]
+                    )
+                    if i in cycles_to_keep:
+                        # remove i
+                        cycles_to_keep.pop(cycles_to_keep.index(i))
+                    else:
+                        # add cycle i to list to keep
+                        cycles_to_keep = sorted(cycles_to_keep + [i])
+                    self.result_df.loc[self.current_idx, "Cycles"] = ",".join(
+                        map(str, cycles_to_keep)
+                    )
+                    self.update_torque_analysis()
+                    self.update_torque_gui()
+                    break
+
+    def open_data_folder_button_clicked(self):
+        self.torque_file_list = self.get_torque_files(
+            filter_already_analyzed=self.ui.skipAlreadyAnalyzedCheckBox.isChecked()
+        )
+        if len(self.torque_file_list) > 0:
+            self.ui.currentFileSpinBox.setMaximum(len(self.torque_file_list))
+            self.ui.currentFileSpinBox.setSuffix(f" / {len(self.torque_file_list)}")
+            # self.ui.fileInfoGroupBox.setEnabled(True)
+            self.ui.analysisGroupBox.setEnabled(True)
+            self.current_file = 0
+            self.process_current_file()
+
+    def open_result_file_button_clicked(self):
+        self.result_file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Summary File",
+            "",
+            filter="Summary Files (*.xlsx)",
+            options=QFileDialog.Option.DontConfirmOverwrite,
+        )
+        self.result_file_path = Path(self.result_file_path)
+        if self.result_file_path.exists():
+            self.result_df = pd.read_excel(self.result_file_path)
+            logger.info(
+                f"Loaded result file {self.result_file_path} with {len(self.result_df)} entries"
             )
-        )
-        self.ui.rabbitIDEdit.setText(str(self.result_df.loc[self.current_idx, "ID"]))
-        self.ui.rabbitAgeSpinBox.setValue(
-            int(self.result_df.loc[self.current_idx, "Age"])
-        )
-        self.ui.rabbitLimbEdit.setText(
-            str(
-                self.result_df.loc[self.current_idx, "Limb"]
-                + self.result_df.loc[self.current_idx, "Side"]
+        else:
+            self.result_df = pd.DataFrame(columns=list(RESULT_FIELDS.keys())).astype(
+                RESULT_FIELDS
             )
-        )
-        self.ui.expSpeedSpinBox.setValue(
-            float(self.result_df.loc[self.current_idx, "Speed"])
-        )
-        self.ui.expCommentEdit.setText(
-            str(self.result_df.loc[self.current_idx, "Comments"])
-        )
-        self.ui.removeOutliersCheckBox.setChecked(
-            bool(self.result_df.loc[self.current_idx, "Filtered"] > 0)
-        )
-        self.ui.outlierThresholdSpinBox.setValue(
-            float(self.result_df.loc[self.current_idx, "Filtered"])
-        )
-        self.ui.cyclesToKeepEdit.setText(
-            str(self.result_df.loc[self.current_idx, "Cycles"])
-        )
-        self.ui.rejectFileButton.setChecked(
-            bool(self.result_df.loc[self.current_idx, "Rejected"])
-        )
-        self.plot_torque()
+            logger.info(f"created new result file {self.result_file_path}")
+        self.ui.openDataFolderButton.setEnabled(True)
+        self.ui.dataFolderPathEdit.setEnabled(True)
+
+    def outlier_threshold_changed(self, val):
+        self.result_df.loc[self.current_idx, "Filtered"] = val
+        self.update_torque_analysis()
 
     def plot_torque(self):
         df = read_torque_data(
@@ -610,6 +473,148 @@ class MainWindow(QMainWindow):
             Path(self.result_df.loc[self.current_idx, "Filename"]).stem
         )
         self.figure.canvas.draw()
+
+    def prev_file_button_clicked(self):
+        self.current_file = constrain(
+            self.current_file - 1, 0, len(self.torque_file_list) - 1
+        )
+        relative_filename = Path(self.torque_file_list[self.current_file]).relative_to(
+            self.data_files_root_folder
+        )
+        self.current_idx = self.get_file_idx(relative_filename)
+        self.ui.currentFileSpinBox.setValue(self.current_file)
+        self.process_current_file()
+
+    def process_current_file(self):
+        filename = self.torque_file_list[self.current_file]
+        relative_filename = filename.relative_to(self.data_files_root_folder)
+        logger.debug(f"Processing file [{self.current_file}][{filename}]")
+        idx = self.get_file_idx(relative_filename)
+        if idx is None:
+            # no data in the database,
+            self.current_idx = self.get_next_file_idx()
+            temp = parse_torque_filename(filename.name)
+            expDate = None
+            for part in relative_filename.parts:
+                try:
+                    expDate = datetime.date.fromisoformat(part)
+                    break
+                except ValueError:
+                    expDate = None
+
+            self.result_df.loc[self.current_idx, "ID"] = temp["ID"]  # str
+            self.result_df.loc[self.current_idx, "ExpDate"] = pd.to_datetime(expDate)
+            self.result_df.loc[self.current_idx, "Age"] = int(temp["Age"])  # int
+            self.result_df.loc[self.current_idx, "Limb"] = temp["Limb"]  # str
+            self.result_df.loc[self.current_idx, "Side"] = temp["Side"]  # str
+            # fix to handle the fact that some filename contain a unit and some don't
+            m = re.match('\d+', temp['Speed'])
+            if m:
+                speed = float(m.group(0))
+            else:
+                speed = pd.NA
+            self.result_df.loc[self.current_idx, "Speed"] = speed  # float
+            self.result_df.loc[self.current_idx, "Comments"] = temp["Comments"]  # str
+            self.result_df.loc[self.current_idx, "Filename"] = str(relative_filename)
+            self.result_df.loc[self.current_idx, "Filtered"] = 0
+            df = read_torque_data(filename)
+            cycles = range(0, len(get_angle_cycles(df["Angle"])))
+            cycles_str = ",".join(map(str, cycles))
+            self.result_df.loc[self.current_idx, "Cycles"] = cycles_str
+            self.result_df.loc[self.current_idx, "Rejected"] = False
+        self.update_torque_analysis()
+        self.update_torque_gui()
+
+    def reject_button_clicked(self, checked):
+        self.result_df.loc[self.current_idx, "Validated"] = bool(checked)
+        self.result_df.loc[self.current_idx, "Rejected"] = bool(checked)
+        self.save_result_file()
+        self.next_file_button_clicked()
+
+    def remove_outlier_checkbox_changed(self, checked):
+        if checked:
+            self.ui.outlierThresholdSpinBox.setEnabled(True)
+            if np.isclose(self.ui.outlierThresholdSpinBox.value(), 0):
+                self.ui.outlierThresholdSpinBox.setValue(DEFAULT_OUTLIER_THRESHOLD)
+            self.result_df.loc[self.current_idx, "Filtered"] = (
+                self.ui.outlierThresholdSpinBox.value()
+            )
+        else:
+            self.ui.outlierThresholdSpinBox.setEnabled(False)
+            self.result_df.loc[self.current_idx, "Filtered"] = 0
+        self.update_torque_analysis()
+
+    def save_result_file(self):
+        self.result_df.to_excel(self.result_file_path, index=False)
+
+    def skip_already_analyzed_clicked(self, checked):
+        self.torque_file_list = self.get_torque_files(filter_already_analyzed=checked)
+        self.ui.currentFileSpinBox.setMaximum(len(self.torque_file_list))
+        self.ui.currentFileSpinBox.setSuffix(f" / {len(self.torque_file_list)}")
+        self.process_current_file()
+
+    def update_torque_analysis(self):
+        """
+        recomputes the slope and r values based on current filtered state and selected cycles
+        :return: None
+        """
+        filename = (
+            self.data_files_root_folder
+            / self.result_df.loc[self.current_idx, "Filename"]
+        )
+        filter_threshold = self.result_df.loc[self.current_idx, "Filtered"]
+        cycles = parse_cycle_str(self.result_df.loc[self.current_idx, "Cycles"])
+        slope, r = analyze_torque_file(
+            filename, filter_threshold=filter_threshold, cycles=cycles
+        )
+        self.result_df.loc[self.current_idx, "Slope"] = slope
+        self.result_df.loc[self.current_idx, "R"] = r
+        self.result_df.loc[self.current_idx, "Validated"] = False
+        self.update_torque_gui()
+        # self.result_df.to_excel(self.result_file_path, index=False)  # FIXME: move saving to own action
+    
+    def update_torque_gui(self):
+        self.ui.currentFileSpinBox.setValue(int(self.current_file))
+        self.ui.expDateEdit.setDate(
+            QDate.fromString(
+                str(self.result_df.loc[self.current_idx, "ExpDate"]),
+                Qt.DateFormat.ISODate,
+            )
+        )
+        self.ui.rabbitIDEdit.setText(str(self.result_df.loc[self.current_idx, "ID"]))
+        self.ui.rabbitAgeSpinBox.setValue(
+            int(self.result_df.loc[self.current_idx, "Age"])
+        )
+        self.ui.rabbitLimbEdit.setText(
+            str(
+                self.result_df.loc[self.current_idx, "Limb"]
+                + self.result_df.loc[self.current_idx, "Side"]
+            )
+        )
+        self.ui.expSpeedSpinBox.setValue(
+            float(self.result_df.loc[self.current_idx, "Speed"])
+        )
+        self.ui.expCommentEdit.setText(
+            str(self.result_df.loc[self.current_idx, "Comments"])
+        )
+        self.ui.removeOutliersCheckBox.setChecked(
+            bool(self.result_df.loc[self.current_idx, "Filtered"] > 0)
+        )
+        self.ui.outlierThresholdSpinBox.setValue(
+            float(self.result_df.loc[self.current_idx, "Filtered"])
+        )
+        self.ui.cyclesToKeepEdit.setText(
+            str(self.result_df.loc[self.current_idx, "Cycles"])
+        )
+        self.ui.rejectFileButton.setChecked(
+            bool(self.result_df.loc[self.current_idx, "Rejected"])
+        )
+        self.plot_torque()
+
+    def validate_button_clicked(self):
+        self.result_df.loc[self.current_idx, "Validated"] = True
+        self.save_result_file()
+        self.next_file_button_clicked()
 
 
 if __name__ == "__main__":
