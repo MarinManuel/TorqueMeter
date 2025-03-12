@@ -115,10 +115,7 @@ def read_torque_data(filename, column_names=None, arm_length=TORQUE_ARM_LENGTH):
             df = pd.read_excel(filename)
             df = pd.read_excel(filename)
     elif Path(filename).suffix == ".csv":
-        df = pd.read_csv(
-            filename, on_bad_lines="warn"
-            filename, on_bad_lines="warn"
-        )
+        df = pd.read_csv(filename, on_bad_lines="warn")
     else:
         raise ValueError(f"Cannot parse files with extension {filename}")
     #
