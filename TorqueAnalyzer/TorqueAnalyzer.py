@@ -114,6 +114,7 @@ def read_torque_data(filename, column_names=None, arm_length=TORQUE_ARM_LENGTH):
             # noinspection PyTypeChecker
             df = pd.read_excel(filename)
             df = pd.read_excel(filename)
+            df = pd.read_excel(filename)
     elif Path(filename).suffix == ".csv":
         df = pd.read_csv(filename, on_bad_lines="warn")
     else:
