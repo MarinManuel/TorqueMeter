@@ -16,7 +16,7 @@
     These parameters may need to be adjusted for your build
  ****************************************************/
 #define PWM_ADDRESS 0x40   // I2C Address of the PWM board
-#define SERVO_PIN 15       // Servo pins on the PWM board
+#define SERVO_PIN 0       // Servo pins on the PWM board
 
 
 
@@ -32,18 +32,18 @@
 #define BAUDRATE 115200   // Serial Baudrate -- Make sure program on computer uses same values
 //#define DEBUG
 /**** PWM / Servo ****/
-#define PWM_INTERNAL_CLOCK 26500000  // The int.osc. for the PCA9685 chip is not very precise. Adjust this value so that the PWM frequency match the SERVO_FREQ
+#define PWM_INTERNAL_CLOCK 26600000  // Calib MM 2025-05-01 -- The int.osc. for the PCA9685 chip is not very precise. Adjust this value so that the PWM frequency match the SERVO_FREQ
 #define SERVO_FREQ 50 // Analog servos run at ~50 Hz updates
 #define SERVOMIN 100 // This is the 'minimum' pulse length count (out of 4096) -- Different servos might need different values
 #define SERVOMIN_ANGLE 0  // This is the corresponding minimum angle 
 #define SERVOMAX 470 // This is the 'maximum' pulse length count (out of 4096)
 #define SERVOMAX_ANGLE 180 // this is the corresponding maximum angle
 #define ANGLE_BASE 90  // This is the angle at which the device idles
-#define ANGLE_MAX 125  // this is the angle at the end of the movements
-#define ANGLE_MIN 55  // this is the angle at the other end
+#define ANGLE_MAX 135  // this is the angle at the end of the movements
+#define ANGLE_MIN 45  // this is the angle at the other end
 #define CYCLE_PERIOD 1000 // duration that the whole cycle should take (in ms)
 /*****  load cell *****/
-#define CALIBRATION_FACTOR 3071.57  // use CalibTorqueMeter sketch to get this value 
+#define CALIBRATION_FACTOR -10880.36  // use CalibTorqueMeter sketch to get this value 
 /***** Arduino Pins
     Make sure those match the physical circuit */
 #define LOADCELL_DOUT_PIN  3

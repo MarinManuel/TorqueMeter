@@ -113,7 +113,7 @@ class MainWindow(QMainWindow):
         self.curve = self.plotItem.plot(symbol="o")
         self.data = np.ndarray(shape=(0, 2))
 
-        self.timer = QTimer()
+        self.timer = QTimer(None)
         self.timer.timeout.connect(self.update)
         self.timer.stop()
 
