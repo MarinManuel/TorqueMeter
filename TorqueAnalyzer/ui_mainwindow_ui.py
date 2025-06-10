@@ -48,34 +48,40 @@ class Ui_MainWindow(object):
         icon.addFile(u":/icons/summary", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.openResultFileButton.setIcon(icon)
 
-        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.openResultFileButton)
+        self.formLayout_2.setWidget(1, QFormLayout.LabelRole, self.openResultFileButton)
 
         self.summaryFilePathEdit = QLabel(self.startHereGroupBox)
         self.summaryFilePathEdit.setObjectName(u"summaryFilePathEdit")
 
-        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.summaryFilePathEdit)
-
-        self.openDataFolderButton = QPushButton(self.startHereGroupBox)
-        self.openDataFolderButton.setObjectName(u"openDataFolderButton")
-        self.openDataFolderButton.setEnabled(False)
-        icon1 = QIcon()
-        icon1.addFile(u":/icons/open_folder", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.openDataFolderButton.setIcon(icon1)
-        self.openDataFolderButton.setIconSize(QSize(16, 16))
-
-        self.formLayout_2.setWidget(1, QFormLayout.LabelRole, self.openDataFolderButton)
-
-        self.dataFolderPathEdit = QLabel(self.startHereGroupBox)
-        self.dataFolderPathEdit.setObjectName(u"dataFolderPathEdit")
-        self.dataFolderPathEdit.setEnabled(False)
-
-        self.formLayout_2.setWidget(1, QFormLayout.FieldRole, self.dataFolderPathEdit)
+        self.formLayout_2.setWidget(1, QFormLayout.FieldRole, self.summaryFilePathEdit)
 
         self.skipAlreadyAnalyzedCheckBox = QCheckBox(self.startHereGroupBox)
         self.skipAlreadyAnalyzedCheckBox.setObjectName(u"skipAlreadyAnalyzedCheckBox")
         self.skipAlreadyAnalyzedCheckBox.setChecked(True)
 
-        self.formLayout_2.setWidget(2, QFormLayout.SpanningRole, self.skipAlreadyAnalyzedCheckBox)
+        self.formLayout_2.setWidget(3, QFormLayout.SpanningRole, self.skipAlreadyAnalyzedCheckBox)
+
+        self.openDataFolderButton = QPushButton(self.startHereGroupBox)
+        self.openDataFolderButton.setObjectName(u"openDataFolderButton")
+        self.openDataFolderButton.setEnabled(True)
+        icon1 = QIcon()
+        icon1.addFile(u":/icons/open_folder", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.openDataFolderButton.setIcon(icon1)
+        self.openDataFolderButton.setIconSize(QSize(16, 16))
+
+        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.openDataFolderButton)
+
+        self.dataFolderPathEdit = QLabel(self.startHereGroupBox)
+        self.dataFolderPathEdit.setObjectName(u"dataFolderPathEdit")
+        self.dataFolderPathEdit.setEnabled(True)
+
+        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.dataFolderPathEdit)
+
+        self.startButton = QPushButton(self.startHereGroupBox)
+        self.startButton.setObjectName(u"startButton")
+        self.startButton.setEnabled(False)
+
+        self.formLayout_2.setWidget(4, QFormLayout.SpanningRole, self.startButton)
 
 
         self.verticalLayout.addWidget(self.startHereGroupBox)
@@ -191,7 +197,6 @@ class Ui_MainWindow(object):
 
         self.validateButton = QPushButton(self.analysisGroupBox)
         self.validateButton.setObjectName(u"validateButton")
-        self.validateButton.setEnabled(True)
         palette = QPalette()
         brush = QBrush(QColor(0, 0, 0, 255))
         brush.setStyle(Qt.SolidPattern)
@@ -361,8 +366,7 @@ class Ui_MainWindow(object):
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
-        QWidget.setTabOrder(self.openResultFileButton, self.openDataFolderButton)
-        QWidget.setTabOrder(self.openDataFolderButton, self.skipAlreadyAnalyzedCheckBox)
+        QWidget.setTabOrder(self.openResultFileButton, self.skipAlreadyAnalyzedCheckBox)
         QWidget.setTabOrder(self.skipAlreadyAnalyzedCheckBox, self.prevFileButton)
         QWidget.setTabOrder(self.prevFileButton, self.currentFileSpinBox)
         QWidget.setTabOrder(self.currentFileSpinBox, self.nextFileButton)
@@ -387,9 +391,10 @@ class Ui_MainWindow(object):
         self.startHereGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Start Here", None))
         self.openResultFileButton.setText("")
         self.summaryFilePathEdit.setText(QCoreApplication.translate("MainWindow", u"Result file...", None))
+        self.skipAlreadyAnalyzedCheckBox.setText(QCoreApplication.translate("MainWindow", u"Skip already analyzed files", None))
         self.openDataFolderButton.setText("")
         self.dataFolderPathEdit.setText(QCoreApplication.translate("MainWindow", u"Load data files...", None))
-        self.skipAlreadyAnalyzedCheckBox.setText(QCoreApplication.translate("MainWindow", u"Skip already analyzed files", None))
+        self.startButton.setText(QCoreApplication.translate("MainWindow", u"Start", None))
         self.fileInfoGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"File Info", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"Exp Date", None))
         self.expDateEdit.setDisplayFormat(QCoreApplication.translate("MainWindow", u"yyyy-MM-dd", None))

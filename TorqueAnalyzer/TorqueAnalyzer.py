@@ -11,11 +11,11 @@ import pandas as pd
 import scipy.stats as st
 import seaborn as sns
 from PySide6.QtCore import QDate, Qt
-from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
     QFileDialog,
+    QMessageBox,
 )
 from matplotlib.backend_bases import MouseEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -47,6 +47,7 @@ RESULT_FIELDS = {
     "Validated": bool,
     "Slope": float,
     "R": float,
+    "IndSlopes": str,
 }
 DEFAULT_OUTLIER_THRESHOLD = 3.0
 
@@ -118,12 +119,12 @@ def read_torque_data(filename, column_names=None, arm_length=TORQUE_ARM_LENGTH):
     else:
         raise ValueError(f"Cannot parse files with extension {filename}")
     #
-    # There was a change between 2023 and 2024 where 
+    # There was a change between 2023 and 2024 where
     # we switched from a 3 col format to a 4 col format
     #
-    if len(df.columns)>3:
+    if len(df.columns) > 3:
         df.drop(columns=df.columns[0], inplace=True)
-    
+
     df.columns = column_names
     df["Torque"] = df["Force"] * arm_length
     return df
@@ -161,6 +162,19 @@ def select_cycles(df, cycles_to_keep=None):
     return temp
 
 
+def iter_cycles(df, cycles_to_keep=None):
+    """
+    iterate through the datafile one cycle in cycles_to_keep at a time
+    :param df: the dataframe to filter
+    :param cycles_to_keep: list of indices [0-N cycles] of cycles to keep. If None, keep all cycles.
+    :yield: a copy of the dataframe
+    """
+    cycles_lim = get_angle_cycles(df["Angle"])
+    for i, (s, t) in enumerate(cycles_lim):
+        if cycles_to_keep is None or i in cycles_to_keep:
+            yield df.loc[s:t, :]
+
+
 def analyze_torque_file(filename, filter_threshold=0, cycles=None):
     """
     analyze the torque file, optionally filtering the data first, and only considering the cycles listed in `cycles`
@@ -179,10 +193,14 @@ def analyze_torque_file(filename, filter_threshold=0, cycles=None):
     if cycles is None:
         cycles = range(0, len(cycles_lims))
 
-    df = select_cycles(df, cycles_to_keep=cycles)
-    df.dropna(subset=["Angle", "Torque"], inplace=True)
-    slope, intercept, r, p, se = st.linregress(x=df["Angle"], y=df["Torque"])
-    return slope, r
+    temp = select_cycles(df, cycles_to_keep=cycles)
+    temp.dropna(subset=["Angle", "Torque"], inplace=True)
+    slope, intercept, r, p, se = st.linregress(x=temp["Angle"], y=temp["Torque"])
+    ind_slopes = []
+    for dg in iter_cycles(df, cycles_to_keep=cycles):
+        temp_slope, _, _, _, _ = st.linregress(x=dg["Angle"], y=dg["Torque"])
+        ind_slopes.append(temp_slope)
+    return slope, r, ind_slopes
 
 
 def parse_torque_filename(filename: str):
@@ -239,6 +257,7 @@ class MainWindow(QMainWindow):
         self.ui.openDataFolderButton.clicked.connect(
             self.open_data_folder_button_clicked
         )
+        self.ui.startButton.clicked.connect(self.start_analysis)
         self.ui.nextFileButton.clicked.connect(self.next_file_button_clicked)
         self.ui.prevFileButton.clicked.connect(self.prev_file_button_clicked)
         self.ui.currentFileSpinBox.valueChanged.connect(
@@ -256,7 +275,78 @@ class MainWindow(QMainWindow):
         self.ui.validateButton.clicked.connect(self.validate_button_clicked)
         self.ui.cyclesToKeepEdit.textChanged.connect(self.cycles_edit_changed)
         self.ui.rejectFileButton.clicked.connect(self.reject_button_clicked)
+        # noinspection PyTypeChecker
         self.cid = self.canvas.mpl_connect("button_press_event", self.on_plot_clicked)
+
+    def open_data_folder_button_clicked(self):
+        folder = QFileDialog.getExistingDirectory(
+            self, "Open Folder with torque files", "", QFileDialog.Option.ShowDirsOnly
+        )
+        self.data_files_root_folder = Path(folder).resolve()
+        if self.data_files_root_folder is not None and self.result_df is not None:
+            self.ui.startButton.setEnabled(True)
+
+    def open_result_file_button_clicked(self):
+        self.result_file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Summary File",
+            "",
+            filter="Summary Files (*.xlsx)",
+            options=QFileDialog.Option.DontConfirmOverwrite,
+        )
+        self.result_file_path = Path(self.result_file_path)
+        if self.result_file_path.exists():
+            self.result_df = pd.read_excel(self.result_file_path, dtype=RESULT_FIELDS)
+            logger.info(
+                f"Loaded result file {self.result_file_path} with {len(self.result_df)} entries"
+            )
+        else:
+            self.result_df = pd.DataFrame(columns=list(RESULT_FIELDS.keys())).astype(
+                RESULT_FIELDS
+            )
+            logger.info(f"created new result file {self.result_file_path}")
+        if self.data_files_root_folder is not None and self.result_df is not None:
+            self.ui.startButton.setEnabled(True)
+
+    def start_analysis(self):
+        if self.result_file_path is None or self.result_df is None:
+            QMessageBox.warning(
+                self, "Select files first", "Open result file and folders first"
+            )
+            return
+
+        self.torque_file_list = self.get_torque_files(
+            filter_already_analyzed=self.ui.skipAlreadyAnalyzedCheckBox.isChecked()
+        )
+
+        # updated 2025-06: test if dataframe contains individual slopes, and if not, offer to fill in
+        if "IndSlopes" not in self.result_df.columns:
+            self.result_df.loc[:, "IndSlopes"] = pd.NA
+        if any(self.result_df["IndSlopes"].isna()):
+            reply = QMessageBox.question(
+                self,
+                "Individual slope values",
+                "Individual slopes missing for some files, would you like to add them now?",
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                for idx, row in self.result_df[
+                    self.result_df["IndSlopes"].isna()
+                ].iterrows():
+                    _, _, ind_slopes = analyze_torque_file(
+                        self.data_files_root_folder / row["Filename"],
+                        filter_threshold=int(row["Filtered"]),
+                        cycles=list(map(int, row["Cycles"].split(","))),
+                    )
+                    self.result_df.loc[idx, "IndSlopes"] = ",".join(
+                        [f"{a:.2f}" for a in ind_slopes]
+                    )
+
+        if len(self.torque_file_list) > 0:
+            self.ui.currentFileSpinBox.setMaximum(len(self.torque_file_list))
+            self.ui.currentFileSpinBox.setSuffix(f" / {len(self.torque_file_list)}")
+            self.ui.analysisGroupBox.setEnabled(True)
+            self.current_file = 0
+            self.process_current_file()
 
     def cycles_edit_changed(self, text):
         self.result_df.loc[self.current_idx, "Cycles"] = text
@@ -295,15 +385,7 @@ class MainWindow(QMainWindow):
         logger.debug(f"Creating new idx: [{idx}]")
         return idx
 
-    def get_root_folder(self):
-        root_folder = QFileDialog.getExistingDirectory(
-            self, "Open Folder with torque files", "", QFileDialog.Option.ShowDirsOnly
-        )
-        return root_folder
-
     def get_torque_files(self, filter_already_analyzed=True):
-        if self.data_files_root_folder is None:
-            self.data_files_root_folder = Path(self.get_root_folder())
         file_list = sorted(
             filter(
                 lambda path: path.suffix in TORQUE_FILES_EXTENSIONS,
@@ -315,11 +397,13 @@ class MainWindow(QMainWindow):
             # This removes the files that are already in the database,
             # but only if they have been accepted
             file_list = sorted(
-            filter(
-                lambda x: str(x.relative_to(self.data_files_root_folder)) 
-                not in self.result_df[self.result_df["Validated"] == True]["Filename"].values,
-                file_list,
-            )
+                filter(
+                    lambda x: str(x.relative_to(self.data_files_root_folder))
+                    not in self.result_df[self.result_df["Validated"] == True][
+                        "Filename"
+                    ].values,
+                    file_list,
+                )
             )
 
         return list(file_list)
@@ -363,40 +447,6 @@ class MainWindow(QMainWindow):
                     self.update_torque_analysis()
                     self.update_torque_gui()
                     break
-
-    def open_data_folder_button_clicked(self):
-        self.torque_file_list = self.get_torque_files(
-            filter_already_analyzed=self.ui.skipAlreadyAnalyzedCheckBox.isChecked()
-        )
-        if len(self.torque_file_list) > 0:
-            self.ui.currentFileSpinBox.setMaximum(len(self.torque_file_list))
-            self.ui.currentFileSpinBox.setSuffix(f" / {len(self.torque_file_list)}")
-            # self.ui.fileInfoGroupBox.setEnabled(True)
-            self.ui.analysisGroupBox.setEnabled(True)
-            self.current_file = 0
-            self.process_current_file()
-
-    def open_result_file_button_clicked(self):
-        self.result_file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Summary File",
-            "",
-            filter="Summary Files (*.xlsx)",
-            options=QFileDialog.Option.DontConfirmOverwrite,
-        )
-        self.result_file_path = Path(self.result_file_path)
-        if self.result_file_path.exists():
-            self.result_df = pd.read_excel(self.result_file_path)
-            logger.info(
-                f"Loaded result file {self.result_file_path} with {len(self.result_df)} entries"
-            )
-        else:
-            self.result_df = pd.DataFrame(columns=list(RESULT_FIELDS.keys())).astype(
-                RESULT_FIELDS
-            )
-            logger.info(f"created new result file {self.result_file_path}")
-        self.ui.openDataFolderButton.setEnabled(True)
-        self.ui.dataFolderPathEdit.setEnabled(True)
 
     def outlier_threshold_changed(self, val):
         self.result_df.loc[self.current_idx, "Filtered"] = val
@@ -508,7 +558,7 @@ class MainWindow(QMainWindow):
             self.result_df.loc[self.current_idx, "Limb"] = temp["Limb"]  # str
             self.result_df.loc[self.current_idx, "Side"] = temp["Side"]  # str
             # fix to handle the fact that some filename contain a unit and some don't
-            m = re.match('\d+', temp['Speed'])
+            m = re.match(r"\d+", temp["Speed"])
             if m:
                 speed = float(m.group(0))
             else:
@@ -564,15 +614,20 @@ class MainWindow(QMainWindow):
         )
         filter_threshold = self.result_df.loc[self.current_idx, "Filtered"]
         cycles = parse_cycle_str(self.result_df.loc[self.current_idx, "Cycles"])
-        slope, r = analyze_torque_file(
+        slope, r, ind_slopes = analyze_torque_file(
             filename, filter_threshold=filter_threshold, cycles=cycles
         )
         self.result_df.loc[self.current_idx, "Slope"] = slope
         self.result_df.loc[self.current_idx, "R"] = r
         self.result_df.loc[self.current_idx, "Validated"] = False
+        self.result_df.loc[self.current_idx, "IndSlopes"] = ",".join(
+            [f"{a:.2f}" for a in ind_slopes]
+        )
         self.update_torque_gui()
-        # self.result_df.to_excel(self.result_file_path, index=False)  # FIXME: move saving to own action
-    
+
+    def calc_ind_slopes(self, filename=None, cycles=None):
+        pass
+
     def update_torque_gui(self):
         self.ui.currentFileSpinBox.setValue(int(self.current_file))
         self.ui.expDateEdit.setDate(
