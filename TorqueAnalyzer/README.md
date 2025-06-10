@@ -1,13 +1,13 @@
 # Torque Analyzer
 a GUI for manual curation of the torque data files
 
-![image](https://github.com/user-attachments/assets/5e0624c2-eeb8-4ca1-8325-f0fb014257a2)
+![image](https://github.com/user-attachments/assets/b18cecf7-cc5e-473d-ad1c-4eed17fc5872)
 
 
 # Usage
 When first run, the software displays this screen:
 
-![image](https://github.com/user-attachments/assets/e528673d-6ddc-4aaf-bf57-172c134933f7)
+![image](https://github.com/user-attachments/assets/5adbb79b-7b13-4542-aa83-1ec3f41ccc48)
 
 
 Use the `Result File...` button to create a new result Excel file (or open an existing one).
@@ -20,6 +20,9 @@ Then, use the `Load data files...` button to open the root folder containing all
 
 ![image](https://github.com/user-attachments/assets/b6251af1-f913-479c-9cc9-b1f8aac62dd5)
 
+Click on the "Start" button to start the process.
+
+![image](https://github.com/user-attachments/assets/a753efdf-136a-4f38-9541-c471447c6bfe)
 
 The software then displays the first file
 
