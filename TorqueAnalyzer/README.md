@@ -1,5 +1,6 @@
 # Torque Analyzer
 a GUI for manual curation of the torque data files
+
 ![image](https://github.com/user-attachments/assets/5e0624c2-eeb8-4ca1-8325-f0fb014257a2)
 
 

@@ -42,7 +42,7 @@
           <string>Start Here</string>
          </property>
          <layout class="QFormLayout" name="formLayout_2">
-          <item row="0" column="0">
+          <item row="1" column="0">
            <widget class="QPushButton" name="openResultFileButton">
             <property name="text">
              <string/>
@@ -53,17 +53,27 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="1" column="1">
            <widget class="QLabel" name="summaryFilePathEdit">
             <property name="text">
              <string>Result file...</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="3" column="0" colspan="2">
+           <widget class="QCheckBox" name="skipAlreadyAnalyzedCheckBox">
+            <property name="text">
+             <string>Skip already analyzed files</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
            <widget class="QPushButton" name="openDataFolderButton">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="text">
              <string/>
@@ -80,23 +90,23 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="0" column="1">
            <widget class="QLabel" name="dataFolderPathEdit">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="text">
              <string>Load data files...</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QCheckBox" name="skipAlreadyAnalyzedCheckBox">
-            <property name="text">
-             <string>Skip already analyzed files</string>
+          <item row="4" column="0" colspan="2">
+           <widget class="QPushButton" name="startButton">
+            <property name="enabled">
+             <bool>false</bool>
             </property>
-            <property name="checked">
-             <bool>true</bool>
+            <property name="text">
+             <string>Start</string>
             </property>
            </widget>
           </item>
@@ -273,9 +283,6 @@ QPushButton:checked{ background: rgb(255, 0, 0);}</string>
           </item>
           <item row="3" column="0" colspan="3">
            <widget class="QPushButton" name="validateButton">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="palette">
              <palette>
               <active>
@@ -946,7 +953,6 @@ QPushButton:checked{ background: rgb(255, 0, 0);}</string>
  </widget>
  <tabstops>
   <tabstop>openResultFileButton</tabstop>
-  <tabstop>openDataFolderButton</tabstop>
   <tabstop>skipAlreadyAnalyzedCheckBox</tabstop>
   <tabstop>prevFileButton</tabstop>
   <tabstop>currentFileSpinBox</tabstop>
