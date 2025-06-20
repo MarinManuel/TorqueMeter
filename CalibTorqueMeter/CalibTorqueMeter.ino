@@ -16,7 +16,8 @@
 
 
 GENERAL PROCEDURE:
-(1) flip the device perpendicular to the table so as to be able to suspend a weight to the arm.
+(1) use the fulcrum attachment so as to be able to suspend a weight to the arm without the 
+    weight touching the side of the device or resting on the table.
     You may need to place it at the edge of the  table so that the weight can hand freely.
 (2) With no weight attached, move the arm (M<angle>) so that the arm is parallel to the table.
     The weight should be perpendicular to the arm direction.
@@ -37,33 +38,14 @@ SERIAL COMMANDS:
    Sets the scaling factor
  - W<weight (g)>
    Provides the weight of the object attached to the arm at that moment for automatic scaling
- 
- ****************************************************/
-
-
-
-
-
-  Serial.println();
-  Serial.println();
-  Serial.println("GENERAL PROCEDURE:");
-  Serial.println("(1) flip the device perpendicular to the table so as to be able to suspend a weight to the arm.");
-  Serial.println("    You may need to place it at the edge of the  table so that the weight can hand freely.");
-  Serial.println("(2) With no weight attached, move the arm (M<angle>) so that the arm is parallel to the table.");
-  Serial.println("    The weight should be perpendicular to the arm direction.");
-  Serial.println("(3) Still with no weight attached, tare the device. the readings should indicated 0g");
-  Serial.println("(4) Suspend a known weight to the arm, observe the new readings");
-  Serial.println("(5) Provide the value of the weight (W<weight>). The system calculates the correct scaling");
-  Serial.println("    and applies it. The readings should match the weight at this point.");
-  Serial.println("    Be careful not to exceed the weight rating of the load cell.");
-
+*/
 
 #include <HX711.h>
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
 #define PRINT_PERIOD 1000 // refresh rate of the values read from the load cell (in ms)
-#define BAUDRATE 19200   // Serial Baudrate -- Make sure program on computer uses same values
+#define BAUDRATE 115200   // Serial Baudrate -- Make sure program on computer uses same values
 #define LOADCELL_DOUT_PIN  3
 #define LOADCELL_CLK_PIN  2
 
