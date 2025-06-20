@@ -43,7 +43,7 @@
 #define ANGLE_MIN 45  // this is the angle at the other end
 #define CYCLE_PERIOD 1000 // duration that the whole cycle should take (in ms)
 /*****  load cell *****/
-#define CALIBRATION_FACTOR -10880.36  // use CalibTorqueMeter sketch to get this value 
+#define CALIBRATION_FACTOR 11807.45  // use CalibTorqueMeter sketch to get this value 
 /***** Arduino Pins
     Make sure those match the physical circuit */
 #define LOADCELL_DOUT_PIN  3
